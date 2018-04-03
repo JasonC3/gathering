@@ -34,4 +34,18 @@ public interface IStore {
 	 * Remove of all data.
 	 */
 	public void clear();
+
+	/**
+	 * Get the token.
+	 * 
+	 * @return Token
+	 */
+	public String getToken();
+
+	/**
+	 * Set the token.
+	 * 
+	 * @param token
+	 */
+	public void setToken(String token);
 }

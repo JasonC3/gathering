@@ -1,8 +1,9 @@
 package doa;
 
-import java.util.ArrayList;
+import java.security.MessageDigest;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -14,11 +15,13 @@ public class Storage implements IStore {
 	private static Storage storage = null;
 	public static final int MAX_STORAGE = 128;
 	private Map<Integer, ISource> buffer;
-	private String url;
+	private static final String url = "http://119.90.43.180:6525/focustrackinginfotemp/addfocusinfotmpdata";
+	private String token;
+	private Date times;
 
 	private Storage() {
 		buffer = new HashMap<Integer, ISource>(MAX_STORAGE);
-		url = "https://localhost/?uploadid=";
+		token = new String();
 	}
 
 	public static Storage getInstance() {
@@ -31,6 +34,39 @@ public class Storage implements IStore {
 		return storage;
 	}
 
+	public static final String MD5(String s) {
+		if (s == null)
+			s = "";
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			byte[] b = md.digest(s.getBytes("utf-8"));
+			return toHex(b);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public static final String toHex(byte[] b) {
+		final char[] HEX_DIGITS = "0132456789ABCDEF".toCharArray();
+		StringBuffer ret = new StringBuffer(b.length * 2);
+		for (int i = 0; i < b.length; i++) {
+			ret.append(HEX_DIGITS[(b[i] >> 4) & 0x0f]);
+			ret.append(HEX_DIGITS[b[i] & 0x0f]);
+		}
+		return ret.toString();
+	}
+
+	private boolean checkReturn(String ret) {
+		String[] sa = ret.split("Status");
+		if (sa.length != 2)
+			return false;
+		sa = sa[1].split(",");
+		if (Integer.parseInt(sa[0]) == 2)
+			return true;
+		else
+			return false;
+	}
+
 	@Override
 	public void add(ISource src) {
 		// TODO Auto-generated method stub
@@ -41,14 +77,24 @@ public class Storage implements IStore {
 	@Override
 	public void post() {
 		// TODO Auto-generated method stub
-		DataStore ds = DataStore.getInstance();
-		List<Integer> done = new ArrayList<Integer>(buffer.size());
-		for (ISource src : buffer.values())
-			if (ds.doPost(url + src.getSerial(), formatSource(src)).equals(""))
-				// Successfully Posted
-				done.add(src.getSerial());
-		for (int i : done)
-			buffer.remove(i);
+		if (!token.isEmpty()) {
+			times = Calendar.getInstance().getTime();
+			String sign = MD5(token + times.getTime());
+			DataStore ds = DataStore.getInstance();
+			StringBuffer buf = new StringBuffer(256 << buffer.size());
+			buf.append("{\"token\":\"").append(token).append("\",\"times\":").append(times.getTime())
+					.append(",\"sign\":\"").append(sign).append("\",\"datalist\":[");
+			for (ISource src : buffer.values()) {
+				buf.append(formatSource(src));
+				buf.append(",");
+			}
+			buf.setLength(buf.length() - 1);
+			buf.append("]}");
+			String ret;
+			ret = ds.doPost(url, buf.toString());
+			if (checkReturn(ret))
+				buffer.clear();
+		}
 	}
 
 	@Override
@@ -71,11 +117,26 @@ public class Storage implements IStore {
 	 * @return XMLDoc string
 	 */
 	public String formatSource(ISource src) {
-		StringBuffer buf = new StringBuffer("<gather>");
+		if (src == null || src.get().isEmpty())
+			return "";
+		StringBuffer buf = new StringBuffer(1 << src.getMagnitude());
+		buf.append("{");
 		for (Entry<IKey, String> e : src.get().entrySet()) {
-			buf.append("<").append(IKey.getLabel(e.getKey())).append(">").append(e.getValue()).append("</")
-					.append(IKey.getLabel(e.getKey())).append(">");
+			buf.append("\"").append(IKey.getLabel(e.getKey())).append("\":\"").append(e.getValue()).append("\",");
 		}
-		return buf.append("</gather>").toString();
+		buf.setLength(buf.length() - 1);
+		return buf.append("}").toString();
+	}
+
+	@Override
+	public String getToken() {
+		// TODO Auto-generated method stub
+		return token;
+	}
+
+	@Override
+	public void setToken(String token) {
+		// TODO Auto-generated method stub
+		this.token = token;
 	}
 }

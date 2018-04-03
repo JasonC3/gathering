@@ -1,6 +1,5 @@
 package ifc;
 
-import java.io.Serializable;
 import java.util.Map;
 
 /**
@@ -11,7 +10,12 @@ import java.util.Map;
  * @author Jason Chen
  * @version 0.10a 3/29/18
  */
-public interface ISource extends Serializable {
+public interface ISource {
+	public static final int STAT_INVALID_URL = -1;
+	public static final int STAT_UNKNOWED_ERR = -2;
+	public static final int STAT_TIMEOUT = -4;
+	public static final int STAT_DONE = 2;
+
 	/**
 	 * Serialized it.
 	 * 
@@ -27,10 +31,17 @@ public interface ISource extends Serializable {
 	public Map<IKey, String> get();
 
 	/**
-	 * Gather from the hyper-reference <i>'src'</i>.
+	 * Gather from the uniform resource locator.
 	 * 
-	 * @param src
+	 * @param url
 	 *            hyper-reference
 	 */
-	public void gather(String src);
+	public int gather(String url);
+
+	/**
+	 * Get the estimate size of data.
+	 * 
+	 * @return Order of magnitude, power of 2
+	 */
+	public int getMagnitude();
 }

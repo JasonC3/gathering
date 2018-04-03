@@ -4,7 +4,9 @@ import java.io.IOException;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -41,17 +43,22 @@ public class DataStore {
 	 *            XMLDoc string
 	 * @return HTTP Response
 	 */
-	public String doPost(String uri, String reqXml) {
-		HttpPost httpPost = new HttpPost(uri);
-		httpPost.addHeader("Content-Type", "application/xml");
+	public String doPost(String url, String data) {
+		HttpPost req = new HttpPost(url);
+		req.addHeader("Content-Type", "text/json");
 		StringEntity entity = null;
 		try {
-			entity = new StringEntity(reqXml, "UTF-8");
+			entity = new StringEntity(data, "UTF-8");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		httpPost.setEntity(entity);
-		return sendHttpPost(httpPost);
+		req.setEntity(entity);
+		return sendHttpRequest(req);
+	}
+	
+	public String doGet(String url) {
+		HttpGet req=new HttpGet(url);
+		return sendHttpRequest(req);
 	}
 
 	/**
@@ -61,28 +68,28 @@ public class DataStore {
 	 *            HTTP Request URI
 	 * @return HTTP Response
 	 */
-	private String sendHttpPost(HttpPost httpPost) {
-		CloseableHttpClient httpClient = null;
+	private String sendHttpRequest(HttpUriRequest request) {
+		CloseableHttpClient client = null;
 		CloseableHttpResponse response = null;
 		HttpEntity entity = null;
-		String responseContent = null;
+		String content = null;
 		try {
-			httpClient = HttpClients.createDefault();
-			response = httpClient.execute(httpPost);
+			client = HttpClients.createDefault();
+			response = client.execute(request);
 			entity = response.getEntity();
-			responseContent = EntityUtils.toString(entity, "UTF-8");
+			content = EntityUtils.toString(entity, "UTF-8");
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			try {
 				if (response != null)
 					response.close();
-				if (httpClient != null)
-					httpClient.close();
+				if (client != null)
+					client.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		return responseContent;
+		return content;
 	}
 }
